@@ -1,0 +1,15 @@
+# Service 4 — EV-User Charging and Usage Profiles Prediction
+# (EV_Charging_Analysis.ipynb, EV_Session_Energy_Model.ipynb)
+# Reference run: Python 3.11.9 · numpy 1.26.4 · pandas 2.2.3 · scikit-learn 1.5.2 ·
+# lightgbm 4.5.0 · xgboost 2.1.3 · joblib 1.4.2 (Data/models/metrics.json records them).
+# The published .joblib model loads best with the same scikit-learn version.
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.8
+scikit-learn>=1.5
+lightgbm>=4.5
+xgboost>=2.1
+joblib>=1.4
+jupyterlab>=4
+# Only for publishing Data/models/ to Hugging Face (EV_Session_Energy_Model.ipynb §8):
+huggingface_hub>=0.30

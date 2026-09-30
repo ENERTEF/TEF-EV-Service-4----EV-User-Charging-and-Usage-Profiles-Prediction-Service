@@ -1,0 +1,7 @@
+# The Dingle dataset is restricted: never commit it. Only the trained models are published.
+Data/*
+!Data/models/
+outputs/
+.ipynb_checkpoints/
+__pycache__/
+.venv/

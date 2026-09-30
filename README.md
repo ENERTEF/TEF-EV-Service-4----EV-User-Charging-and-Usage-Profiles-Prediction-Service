@@ -618,3 +618,28 @@ This includes protections for:
 - data in transit
 - data at rest
 - user identity privacy
+
+---
+
+# 7. Implementation in this Repository (version 1.0)
+
+| Path | Content |
+| ---- | ------- |
+| [`EV_Charging_Analysis.ipynb`](EV_Charging_Analysis.ipynb) | Analysis and research record: data quality, charging profiles, will-charge / volume / window prediction heads, physical closure, smart-charging counterfactuals |
+| [`EV_Session_Energy_Model.ipynb`](EV_Session_Energy_Model.ipynb) | The deployed session-energy model: pre-session context features → algorithm selection → training → evaluation → export |
+| [`Technical Description.md`](Technical%20Description.md) | What was built, the algorithm selection and the results |
+| `Data/models/` | Trained model (`.joblib`), metrics, algorithm bake-off and model card — published on Hugging Face as [`EnerTEF/Service4-SessionEnergy`](https://huggingface.co/EnerTEF/Service4-SessionEnergy) |
+| `requirements.txt` | Python dependencies |
+
+**Data:** the notebooks use the *Residential Energy Dataset with Electric Vehicles, Photovoltaic
+Generation and Tariff Variability in Ireland* (Scientific Data 13:834, 2026,
+[doi:10.1038/s41597-026-07186-3](https://doi.org/10.1038/s41597-026-07186-3)). It describes four real
+households and is **not redistributed here**: obtain it via the data paper and place `JourneyCharge/`,
+`EnergyStreams/` and `open_meteo_dingle*.csv` under `Data/` (git-ignored), or set `DINGLE_DATASET_ROOT`.
+
+**Quickstart**
+
+```bash
+pip install -r requirements.txt
+jupyter lab
+```
