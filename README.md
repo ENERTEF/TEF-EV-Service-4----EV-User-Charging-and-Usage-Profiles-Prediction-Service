@@ -627,9 +627,10 @@ This includes protections for:
 | ---- | ------- |
 | [`EV_Charging_Analysis.ipynb`](EV_Charging_Analysis.ipynb) | Analysis and research record: data quality, charging profiles, will-charge / volume / window prediction heads, physical closure, smart-charging counterfactuals |
 | [`EV_Session_Energy_Model.ipynb`](EV_Session_Energy_Model.ipynb) | The deployed session-energy model: pre-session context features → algorithm selection → training → evaluation → export |
+| [`EV_External_Validation.ipynb`](EV_External_Validation.ipynb) | External validation on open data (a Renault Zoe data-logger and 35,377 Norwegian residential sessions) and a check of the published results against stronger baselines — see [§7.1](#71-external-validation-and-known-limitations) |
 | [`Technical Description.md`](Technical%20Description.md) | What was built, the algorithm selection and the results |
-| `Data/models/` | Trained model (`.joblib`), metrics, algorithm bake-off and model card — published on Hugging Face as [`EnerTEF/Service4-SessionEnergy`](https://huggingface.co/EnerTEF/Service4-SessionEnergy) |
-| `requirements.txt` | Python dependencies |
+| `Data/models/` | The Hugging Face package: trained model (`.joblib`), model card, `example.py` + `example_sessions.csv` (a short run-the-model script and a small open sample data set), pinned `requirements.txt`, `LICENSE`, metrics and algorithm bake-off — for Hugging Face as [`EnerTEF/EV-Service4-User-Charging-and-Usage-Profiles-Prediction`](https://huggingface.co/EnerTEF/EV-Service4-User-Charging-and-Usage-Profiles-Prediction) (upload is opt-in, `EV_Session_Energy_Model.ipynb` §8) |
+| `requirements.txt` | Python dependencies — the model libraries are **pinned** (see Quickstart) |
 
 **Data:** the notebooks use the *Residential Energy Dataset with Electric Vehicles, Photovoltaic
 Generation and Tariff Variability in Ireland* (Scientific Data 13:834, 2026,
@@ -640,6 +641,44 @@ households and is **not redistributed here**: obtain it via the data paper and p
 **Quickstart**
 
 ```bash
+py -3.11 -m venv .venv            # Python 3.11 (3.12 also works; 3.13 is not supported)
+.venv\Scripts\activate            # macOS / Linux: python3.11 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 jupyter lab
 ```
+
+The model libraries are **pinned** to the reference run (Python 3.11.9 · numpy 1.26.4 · pandas 2.2.3 · scikit-learn 1.5.2 ·
+lightgbm 4.5.0 · xgboost 2.1.3 · joblib 1.4.2). This is required, not cosmetic: the published `session_energy.joblib` is a
+pickle that **does not load on scikit-learn 1.6 or newer** (`AttributeError: … __pyx_unpickle_CyPinballLoss`), and
+scikit-learn 1.5.2 / numpy 1.26.4 have no wheels for Python 3.13. The session notebook refuses to run or export on another
+scikit-learn release. `pip install -r requirements.txt` was verified in a fresh Python 3.11 environment, and every notebook
+and figure in this repository was produced in it.
+
+## 7.1 External validation and known limitations
+
+[`EV_External_Validation.ipynb`](EV_External_Validation.ipynb) tests the models on open data from outside the pilot
+(downloaded from Zenodo on first run into the git-ignored `Data/external/`, CC-BY-4.0, MD5-verified) and re-checks the
+published numbers against stronger baselines; `EV_Charging_Analysis.ipynb` (§9–§11) and `EV_Session_Energy_Model.ipynb` (§4–§6)
+now carry the same no-model baselines for their own results. The validation notebook first reproduces the published hold-out
+metrics exactly with the shipped model, so the figures below come from a verified pipeline.
+
+| Question | Result |
+|---|---|
+| Does the **deployed session-energy model transfer** to another vehicle? Renault Zoe data-logger ([Zenodo 7033914](https://zenodo.org/records/7033914)), 62 sessions, 41 with a verified-complete context | **Not demonstrably.** MAE 5.19 kWh vs 4.42 for the distance × 0.18 baseline on all sessions, 3.67 vs 3.98 on the clean subset; both 95 % intervals include zero, and the sign differs between the two subsets (stable within each across extraction settings). A smoke test, not a benchmark: two cars (22 and 37 kWh packs), small sample, mostly short morning top-ups. |
+| Where does it break? | Sessions more than 400 h after the previous one (8 of 62): MAE 10.1 vs 4.8 kWh for the baseline. Elsewhere it ties the baseline (4.5 vs 4.4). It has no battery-capacity input. |
+| **How much better than a naive predictor is it on the pilot hold-out?** | −44 % MAE against the published baseline (18.7 → 10.5 kWh), but **−30 % against a constant training median** (14.9 kWh), which already beats the published baseline. The gain is real (95 % interval of the gap 2.8–6.0 kWh) but smaller than the headline suggests. |
+| Do the **pilot's three heads** beat no-model baselines? (analysis notebook §9–§11) | **Will-charge:** pooled ROC-AUC 0.66, but a household's own charge rate alone gives 0.63 and 89 % of the lowest-probability quintile is one household; *within a household* the model reaches AUC 0.62 against 0.45–0.47 for persistence, recency and the base rate, and the quintile spread is 37 % vs 61 % of days (pooled: 29 % vs 68 %) — real but modest. **Session energy** (walk-forward): MAE 12.5 kWh vs 16.0 for the training median and for the household's trailing median (−22 %). **Dwell:** MAE 3.65 h vs 4.10 (training median) and 4.20 (trailing median), i.e. −11 % / −13 %. **Volume:** see below. |
+| Do the **will-charge, session-energy and dwell heads** hold up on 35,377 real Norwegian residential sessions ([Zenodo 13896176](https://zenodo.org/records/13896176))? No driving data there, so refitted on reduced features. | Will-charge: pooled ROC-AUC 0.78, but **within-user 0.64** (a user's average rate alone: 0.72 pooled, 0.50 within-user) — calibrated, lowest quintile 12 % of days vs top 78 %. Session energy: quantile GBR with user history MAE 4.96 kWh vs 5.52 for the user's trailing median, q10–q90 coverage 81 % (nominal 80 %); with only the three deployed features that exist there, MAE 7.52 and coverage 75 %. Dwell: MAE 7.2 h against a median dwell of 11.3 h (pilot: 3.65 h against 9.4 h). |
+| Does the **volume head beat a trivial forecast**? | **No.** On Norway a trailing 28-day average matches it (7-day per-user nMAE 43.2 % vs 42.9 %). On the pilot's own walk-forward rows it has lower error at 3, 7 and 14 days per household (7 days: 36.9 vs 45.8 kWh) and at every horizon for the 4-household fleet (7 days: 70.8 vs 96.7 kWh). The fall of nMAE with horizon and portfolio size is an aggregation effect; the analysis notebook originally compared only with the training-set median and now also reports the trailing average (§10.2, Figure 4). |
+| **User segmentation** (spec KPI) on 206 Norwegian users | No clear structure: silhouette 0.21–0.22 for every k = 2–6; stability (adjusted Rand index) 0.79 at k = 2, 0.53–0.62 for k ≥ 3. |
+
+**Known limitations**
+
+- **Four households only** (see above): the 44 % figure is against a weak baseline, and nothing transfers demonstrably to other vehicles or usage.
+- **No battery-capacity or state-of-charge input**: the session-energy model cannot know the size of the pack it is predicting for.
+- **Long gaps** since the last charge are poorly covered by the training data (90th percentile ≈ 100 h) and are where it fails out of domain.
+- **Volume head** has no demonstrated skill over a trailing 28-day average; the fall of nMAE with horizon and portfolio size is an aggregation effect that the trailing average shows equally.
+- **Segments** are assigned by rule on four households; in the 206-user Norwegian population the same kind of profile features were not well separated.
+- **Model file portability**: `Data/models/session_energy.joblib` is a pickle written with scikit-learn 1.5.2; it loads **only** on that release (not 1.6 or newer, so not on Python 3.13 either). The versions are pinned in `requirements.txt` and `Data/models/requirements.txt`, and the model card states the requirement and checks it in its usage snippet.
+- **Timing (Head A)**: most of the pooled ranking is *which household* it is; use the within-household figures above for any claim about picking days or users.
+- **Open data is a proxy.** No open data set was found that records driving *between* charging sessions at scale, which the deployed model requires; a proper external test needs one (or pilot data from a second site).
