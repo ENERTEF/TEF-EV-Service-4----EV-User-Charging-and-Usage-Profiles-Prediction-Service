@@ -1,0 +1,6 @@
+# Environment in which session_energy.joblib loads. It is a pickle: other scikit-learn releases fail to load it.
+# Python 3.11 (reference); 3.9-3.12 have wheels for these pins, 3.13 does not.
+scikit-learn==1.5.2
+numpy==1.26.4
+pandas==2.2.3
+joblib==1.4.2

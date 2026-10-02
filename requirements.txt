@@ -1,15 +1,21 @@
 # Service 4 — EV-User Charging and Usage Profiles Prediction
-# (EV_Charging_Analysis.ipynb, EV_Session_Energy_Model.ipynb)
-# Reference run: Python 3.11.9 · numpy 1.26.4 · pandas 2.2.3 · scikit-learn 1.5.2 ·
-# lightgbm 4.5.0 · xgboost 2.1.3 · joblib 1.4.2 (Data/models/metrics.json records them).
-# The published .joblib model loads best with the same scikit-learn version.
-numpy>=1.26
-pandas>=2.2
+# (EV_Charging_Analysis.ipynb, EV_Session_Energy_Model.ipynb, EV_External_Validation.ipynb)
+#
+# The model libraries are PINNED to the reference run (Python 3.11.9 · numpy 1.26.4 · pandas 2.2.3 ·
+# scikit-learn 1.5.2 · lightgbm 4.5.0 · xgboost 2.1.3 · joblib 1.4.2; Data/models/metrics.json records them).
+# Why: the published session_energy.joblib is a pickle. It does NOT load on scikit-learn >= 1.6
+# (AttributeError: '__pyx_unpickle_CyPinballLoss'), so a newer scikit-learn cannot be used with it.
+# Python: use 3.11 (tested) or another version for which every pin below has wheels (3.9-3.12).
+# scikit-learn 1.5.2 and numpy 1.26.4 have no wheels for Python 3.13, where this install fails.
+numpy==1.26.4
+pandas==2.2.3
 matplotlib>=3.8
-scikit-learn>=1.5
-lightgbm>=4.5
-xgboost>=2.1
-joblib>=1.4
+scikit-learn==1.5.2
+lightgbm==4.5.0
+xgboost==2.1.3
+joblib==1.4.2
 jupyterlab>=4
+# Only for EV_External_Validation.ipynb: the open Zoe data-logger archive uses Deflate64, which zipfile cannot read.
+inflate64>=1.0
 # Only for publishing Data/models/ to Hugging Face (EV_Session_Energy_Model.ipynb §8):
 huggingface_hub>=0.30
